@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>OneDrop - Live Price Drop Marketplace</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* --- VARIABLES & BASE --- */
+    :root {
+      --main: #00ffcc;
+      --main-dark: #00d6b3;
+      --main-glow: rgba(0, 255, 204, 0.4);
+      --bg-deep: #050505;
+      --bg-surface: #121212;
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-main: #ffffff;
+      --text-muted: #a0a0a0;
+      --radius: 16px;
+      --nav-height: 70px;
+      --sidebar-width: 280px;
+      --danger: #ff4757;
+      --success: #2ed573;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      background-color: var(--bg-deep);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(0, 255, 204, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(77, 171, 247, 0.05) 0%, transparent 40%);
+      color: var(--text-main);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- ANIMATIONS & UTILS --- */
+    .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .price-drop-anim { animation: flashRed 1s ease; }
+    @keyframes flashRed { 0% { color: var(--danger); transform: scale(1.1); } 100% { color: var(--main); transform: scale(1); } }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+    /* --- FLUENT REVEAL EFFECT --- */
+    .reveal-card {
+      position: relative;
+      background: var(--bg-surface);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .reveal-card:hover { border-color: rgba(255, 255, 255, 0.2); }
+    .reveal-card::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(600px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(255,255,255,0.06), transparent 40%);
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .reveal-card:hover::after { opacity: 1; }
+
+    /* --- LAYOUT --- */
+    header {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--nav-height);
+      background: rgba(5, 5, 5, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px;
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+      font-weight: 700; font-size: 1.2rem; color: var(--main);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    
+    .logo-icon {
+      width: 36px; height: 36px;
+      border-radius: 50%; border: 2px solid var(--main);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 15px var(--main-glow);
+    }
+
+    /* --- SIDEBAR --- */
+    .sidebar-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px); z-index: 998;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
+
+    .sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-width); background: #0f0f0f;
+      border-right: 1px solid var(--glass-border);
+      transform: translateX(-100%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 999; padding: 20px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+    .sidebar.active { transform: translateX(0); }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; color: var(--text-muted);
+      text-decoration: none; border-radius: 8px; transition: 0.2s;
+      cursor: pointer;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+    .nav-item.active { background: rgba(0, 255, 204, 0.1); color: var(--main); border: 1px solid rgba(0, 255, 204, 0.2); }
+
+    /* --- MAIN --- */
+    main {
+      margin-top: var(--nav-height); padding: 20px;
+      max-width: 1400px; width: 100%;
+      margin-left: auto; margin-right: auto;
+      padding-bottom: 100px;
+    }
+
+    /* --- GRID & CARDS --- */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+
+    .product-card {
+      display: flex; flex-direction: column;
+      position: relative; z-index: 2; cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10; }
+
+    .img-box {
+      aspect-ratio: 4/3; overflow: hidden;
+      border-radius: 8px; margin: 10px; position: relative;
+    }
+    .img-box img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+    .product-card:hover .img-box img { transform: scale(1.1); }
+    
+    .badge-live {
+      position: absolute; top: 10px; right: 10px;
+      background: var(--danger); color: white;
+      padding: 4px 10px; border-radius: 12px;
+      font-size: 0.75rem; font-weight: bold;
+      animation: pulse 1.5s infinite;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+    .price-box {
+      background: rgba(0, 255, 204, 0.1);
+      border: 1px solid rgba(0, 255, 204, 0.2);
+      padding: 6px 12px; border-radius: 8px;
+      color: var(--main); font-weight: 700;
+      font-family: monospace; font-size: 1.2rem;
+      min-width: 100px; text-align: center;
+    }
+
+    /* --- PRODUCT DETAIL VIEW --- */
+    .detail-container {
+      display: grid; grid-template-columns: 1fr; gap: 30px;
+    }
+    @media(min-width: 768px) { .detail-container { grid-template-columns: 1.2fr 1fr; } }
+
+    .detail-img { width: 100%; border-radius: var(--radius); border: 1px solid var(--glass-border); }
+    .detail-info h1 { font-size: 2.5rem; margin-bottom: 10px; line-height: 1.1; }
+    .detail-desc { color: var(--text-muted); line-height: 1.6; margin: 20px 0; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; }
+    
+    .timer-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255, 71, 87, 0.1); color: var(--danger);
+      padding: 5px 12px; border-radius: 20px; font-weight: 600; font-size: 0.9rem;
+      margin-bottom: 20px; border: 1px solid rgba(255, 71, 87, 0.2);
+    }
+
+    /* --- PROFILE --- */
+    .profile-header {
+      display: flex; align-items: center; gap: 20px;
+      padding: 30px; background: var(--bg-surface);
+      border-radius: var(--radius); border: 1px solid var(--glass-border);
+      margin-bottom: 30px;
+    }
+    .avatar-large {
+      width: 100px; height: 100px; border-radius: 50%;
+      border: 3px solid var(--main); object-fit: cover;
+    }
+
+    /* --- FAB --- */
+    .fab {
+      position: fixed; bottom: 80px; right: 20px;
+      width: 60px; height: 60px;
+      background: var(--main); color: #000;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+      box-shadow: 0 0 20px var(--main-glow);
+      cursor: pointer; transition: 0.3s; z-index: 99;
+    }
+    .fab:hover { transform: rotate(90deg) scale(1.1); }
+    @media(min-width: 769px) { .fab { bottom: 30px; } }
+
+    /* --- MODALS & FORMS --- */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px); z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: 0.3s;
+    }
+    .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+    
+    .modal {
+      background: #1a1a1a; width: 90%; max-width: 500px;
+      border-radius: var(--radius); border: 1px solid var(--glass-border);
+      padding: 25px; transform: scale(0.9) translateY(20px);
+      transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-backdrop.open .modal { transform: scale(1) translateY(0); }
+
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; color: var(--text-muted); margin-bottom: 8px; font-size: 0.9rem; }
+    .form-control {
+      width: 100%; background: #222; border: 1px solid #333;
+      padding: 12px; border-radius: 8px; color: white; transition: 0.3s;
+    }
+    .form-control:focus { border-color: var(--main); outline: none; }
+    
+    .btn-main {
+      width: 100%; padding: 14px; background: var(--main);
+      color: black; border: none; border-radius: 8px;
+      font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+      transition: 0.2s; margin-top: 10px;
+    }
+    .btn-main:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--main-glow); }
+
+    .file-drop-area {
+      border: 2px dashed #444; border-radius: 8px;
+      padding: 30px; text-align: center; cursor: pointer;
+      transition: 0.3s; position: relative;
+    }
+    .file-drop-area:hover { border-color: var(--main); background: rgba(0,255,204,0.05); }
+    .file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+    /* --- TOAST --- */
+    .toast-container { position: fixed; top: 90px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      background: rgba(20, 20, 20, 0.95); border-left: 4px solid var(--main);
+      padding: 15px 20px; border-radius: 4px; color: white; min-width: 300px;
+      animation: slideInRight 0.3s forwards; display: flex; align-items: center; justify-content: space-between;
+    }
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand" style="margin-bottom: 30px;">
+      <div class="logo-icon"><i class="fas fa-gem"></i></div>
+      OneDrop
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 5px;">
+      <a class="nav-item active" onclick="app.nav('home')"><i class="fas fa-home"></i> Startseite</a>
+      <a class="nav-item" onclick="app.nav('profile')"><i class="fas fa-user-astronaut"></i> Mein Profil</a>
+      <a class="nav-item" onclick="app.nav('auctions')"><i class="fas fa-gavel"></i> Live-Auktionen</a>
+      <a class="nav-item" onclick="app.nav('tracking')"><i class="fas fa-truck"></i> Sendungsverfolgung</a>
+      <a class="nav-item" onclick="app.nav('changelog')"><i class="fas fa-code-branch"></i> Changelog</a>
+    </nav>
+  </aside>
+
+  <!-- HEADER -->
+  <header>
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <button onclick="app.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;"><i class="fas fa-bars"></i></button>
+      <div class="brand" onclick="app.nav('home')" style="cursor:pointer;">
+        <div class="logo-icon"><i class="fas fa-gem"></i></div>
+        <span style="display: none; md:display:block;">OneDrop</span>
+      </div>
+    </div>
+
+    <div style="flex:1; max-width:400px; margin:0 20px;">
+      <input type="text" class="form-control" style="border-radius:20px; background:rgba(255,255,255,0.05);" placeholder="Search the drop..." oninput="app.search(this.value)">
+    </div>
+
+    <div style="display: flex; gap: 15px; align-items: center;">
+      <div onclick="app.nav('profile')" class="logo-icon" style="width: 35px; height: 35px; border-color: #555; cursor: pointer; overflow:hidden;">
+        <img src="https://placehold.co/100x100/1a1a1a/FFF?text=ME" style="width:100%; height:100%; object-fit:cover;" id="headerAvatar">
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main id="mainContainer"></main>
+
+  <!-- FLOATING UPLOAD BUTTON -->
+  <div class="fab" onclick="app.openUploadModal()">
+    <i class="fas fa-plus"></i>
+  </div>
+
+  <!-- UPLOAD MODAL -->
+  <div class="modal-backdrop" id="uploadModal">
+    <div class="modal reveal-card">
+      <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+        <h2 style="margin:0;"><i class="fas fa-cloud-upload-alt"></i> New Drop</h2>
+        <button onclick="app.closeModals()" style="background:none; border:none; color:#666; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      
+      <form onsubmit="app.handleUpload(event)">
+        <!-- Image Upload -->
+        <div class="form-group">
+          <label>Produktbild</label>
+          <div class="file-drop-area" id="dropArea">
+            <i class="fas fa-images" style="font-size:2rem; color:var(--text-muted); margin-bottom:10px;"></i>
+            <p style="color:var(--text-muted); margin:0; font-size:0.9rem;">Bild hier reinziehen oder klicken</p>
+            <input type="file" class="file-input" name="imageFile" accept="image/*" required onchange="app.handleFilePreview(this)">
+          </div>
+          <div id="imagePreview" style="margin-top:10px; display:none;">
+            <img src="" style="width:100%; height:150px; object-fit:cover; border-radius:8px; border:1px solid #444;">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Titel</label>
+          <input type="text" class="form-control" name="title" required placeholder="z.B. Supreme Brick">
+        </div>
+
+        <div class="form-group">
+          <label>Beschreibung</label>
+          <textarea class="form-control" name="desc" rows="3" placeholder="Zustand, Größe, Vibe..."></textarea>
+        </div>
+
+        <!-- Price Logic -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label>Startpreis (€)</label>
+            <input type="number" class="form-control" name="startPrice" required placeholder="200">
+          </div>
+          <div class="form-group">
+            <label>Min. Preis (€)</label>
+            <input type="number" class="form-control" name="minPrice" required placeholder="50">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Preis-Drop pro Minute (€)</label>
+          <input type="number" class="form-control" name="dropRate" value="1" min="0.1" step="0.1">
+          <small style="color:var(--text-muted); font-size:0.75rem;">Der Preis sinkt automatisch jede Minute.</small>
+        </div>
+
+        <div class="form-group">
+          <label>Kategorie</label>
+          <select class="form-control" name="category">
+            <option value="fashion">Mode / Streetwear</option>
+            <option value="electronics">Tech Stuff</option>
+            <option value="sneakers">Sneakers</option>
+            <option value="misc">Random Shit</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-main">Drop It Like It's Hot 🔥</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    const app = {
+      state: {
+        page: 'home',
+        user: {
+          name: 'DropMaster_2000',
+          joined: '2025',
+          sales: 12,
+          avatar: 'https://placehold.co/200x200/00ffcc/000?text=DM'
+        },
+        products: [], // Loaded via init
+        categories: {
+          'all': { icon: 'fa-layer-group', name: 'Alles' },
+          'fashion': { icon: 'fa-tshirt', name: 'Mode' },
+          'electronics': { icon: 'fa-microchip', name: 'Tech' },
+          'sneakers': { icon: 'fa-shoe-prints', name: 'Kicks' },
+          'misc': { icon: 'fa-box-open', name: 'Sonstiges' }
+        },
+        timerInterval: null
+      },
+
+      init() {
+        // Mock Data with Timestamps for live price drops
+        const now = Date.now();
+        this.state.products = [
+          { 
+            id: 1, title: 'Sony WH-1000XM5', desc: 'Noise Cancelling King. Nur einmal getragen, wie neu. Box ist dabei.', 
+            startPrice: 299, minPrice: 200, dropRate: 1, startTime: now - (1000 * 60 * 15), // Started 15 mins ago
+            cat: 'electronics', img: 'https://placehold.co/600x400/111/00ffcc?text=Sony+XM5', seller: 'AudioDave' 
+          },
+          { 
+            id: 2, title: 'Jordan 1 Chicago', desc: 'Lost & Found. Größe 44. Deadstock. Rechnung vorhanden.', 
+            startPrice: 450, minPrice: 300, dropRate: 2, startTime: now - (1000 * 60 * 45), // Started 45 mins ago
+            cat: 'sneakers', img: 'https://placehold.co/600x400/111/ff4757?text=Jordan+1', seller: 'Kicks4Life' 
+          },
+          { 
+            id: 3, title: 'Vintage iPhone X', desc: 'Funktioniert noch, Screen hat Riss. Für Bastler.', 
+            startPrice: 150, minPrice: 50, dropRate: 0.5, startTime: now - (1000 * 60 * 120), // 2 hours ago
+            cat: 'electronics', img: 'https://placehold.co/600x400/111/00d6b3?text=iPhone', seller: 'TechBasement' 
+          }
+        ];
+
+        this.nav('home');
+        this.setupFluentEffect();
+        
+        // Global Price Ticker
+        this.state.timerInterval = setInterval(() => this.updatePrices(), 1000);
+        console.log("OneDrop Engine V2 Started 🚀");
+      },
+
+      // --- PRICING LOGIC ---
+      calculateCurrentPrice(product) {
+        const elapsedMinutes = Math.floor((Date.now() - product.startTime) / 60000);
+        const dropAmount = elapsedMinutes * product.dropRate;
+        let current = product.startPrice - dropAmount;
+        return current < product.minPrice ? product.minPrice : current;
+      },
+
+      updatePrices() {
+        // Update DOM elements marked with 'data-price-id'
+        this.state.products.forEach(p => {
+          const price = this.calculateCurrentPrice(p);
+          const els = document.querySelectorAll(`[data-price-id="${p.id}"]`);
+          
+          els.forEach(el => {
+            const oldPrice = parseFloat(el.innerText.replace('€', ''));
+            if (price !== oldPrice) {
+              el.innerText = `€${price.toFixed(2)}`;
+              el.classList.remove('price-drop-anim');
+              void el.offsetWidth; // trigger reflow
+              el.classList.add('price-drop-anim');
+            }
+          });
+        });
+      },
+
+      // --- NAVIGATION ---
+      nav(pageId, param = null) {
+        this.state.page = pageId;
+        const container = document.getElementById('mainContainer');
+        
+        // Active Sidebar State
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        // Mapping simple for demo
+        const links = document.querySelectorAll('.sidebar .nav-item');
+        if(pageId === 'home') links[0]?.classList.add('active');
+        if(pageId === 'profile') links[1]?.classList.add('active');
+        if(pageId === 'auctions') links[2]?.classList.add('active');
+        if(pageId === 'tracking') links[3]?.classList.add('active');
+
+        this.closeSidebar();
+
+        // Render content
+        container.innerHTML = `<div class="fade-in">${this.renderPage(pageId, param)}</div>`;
+        this.setupFluentEffect();
+      },
+
+      renderPage(page, param) {
+        switch(page) {
+          case 'home': return this.views.home();
+          case 'product': return this.views.productDetail(param);
+          case 'profile': return this.views.profile();
+          case 'auctions': return this.views.auctions();
+          case 'tracking': return this.views.tracking();
+          case 'changelog': return this.views.changelog();
+          default: return `<h1>404 - Lost in Space</h1>`;
+        }
+      },
+
+      // --- VIEWS ---
+      views: {
+        home() {
+          const cats = Object.entries(app.state.categories).map(([key, val]) => 
+            `<button class="cat-pill" style="margin-right:10px; background:rgba(255,255,255,0.05); border:1px solid #333; padding:8px 16px; border-radius:20px; color:#aaa; cursor:pointer;" onclick="app.filterCat('${key}')">
+               <i class="fas ${val.icon}"></i> ${val.name}
+             </button>`
+          ).join('');
+
+          const productsHtml = app.state.products.map(p => app.components.productCard(p)).join('');
+
+          return `
+            <div style="margin-bottom:20px; overflow-x:auto; white-space:nowrap; padding-bottom:10px;">${cats}</div>
+            <h2 style="margin-bottom:20px; font-weight:800;">🔥 Fresh Drops <span style="font-size:0.5em; color:var(--danger); vertical-align:middle;">LIVE PRICES</span></h2>
+            <div class="grid" id="productGrid">${productsHtml}</div>
+          `;
+        },
+
+        productDetail(id) {
+          const p = app.state.products.find(x => x.id == id);
+          if (!p) return '<h2>Artikel nicht gefunden :/</h2>';
+          const currentPrice = app.calculateCurrentPrice(p);
+
+          return `
+            <div class="detail-container">
+              <div>
+                <img src="${p.img}" class="detail-img reveal-card">
+              </div>
+              <div class="detail-info">
+                <div onclick="app.nav('home')" style="cursor:pointer; margin-bottom:10px; color:var(--main);"><i class="fas fa-arrow-left"></i> Back</div>
+                <div class="timer-badge"><i class="fas fa-history"></i> Preis fällt um €${p.dropRate}/min</div>
+                <h1>${p.title}</h1>
+                <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
+                  <span style="font-size:2.5rem; font-weight:800; color:var(--main);" data-price-id="${p.id}">€${currentPrice.toFixed(2)}</span>
+                  <span style="color:var(--text-muted); text-decoration:line-through;">Start: €${p.startPrice}</span>
+                </div>
+                
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+                  <div style="width:40px; height:40px; background:#333; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-user"></i>
+                  </div>
+                  <div>
+                    <div style="font-weight:bold;">${p.seller}</div>
+                    <div style="font-size:0.8rem; color:#888;">Trusted Seller</div>
+                  </div>
+                </div>
+
+                <button class="btn-main" onclick="app.toast('Gönnung erfolgreich! 🛒', 'success')">COP THAT NOW</button>
+                <div class="detail-desc">
+                  <h3 style="color:white; margin-bottom:10px;">Beschreibung</h3>
+                  <p>${p.desc || 'Keine Beschreibung verfügbar.'}</p>
+                </div>
+              </div>
+            </div>
+          `;
+        },
+
+        profile() {
+          const myDrops = app.state.products.filter(p => p.seller === app.state.user.name);
+          return `
+            <div class="profile-header reveal-card">
+              <img src="${app.state.user.avatar}" class="avatar-large">
+              <div>
+                <h1 style="margin:0;">${app.state.user.name}</h1>
+                <div style="color:var(--text-muted); margin-top:5px;">
+                  Mitglied seit ${app.state.user.joined} • ${app.state.user.sales} Verkäufe
+                </div>
+              </div>
+              <div style="margin-left:auto; text-align:right;">
+                <div style="font-size:1.5rem; font-weight:bold; color:var(--main);">€1,337.00</div>
+                <small style="color:#666;">Guthaben</small>
+              </div>
+            </div>
+
+            <h2>Meine aktiven Drops</h2>
+            ${myDrops.length === 0 ? '<p style="color:#666;">Du hast noch nix gedroppt. Mach mal was!</p>' : 
+              `<div class="grid">${myDrops.map(p => app.components.productCard(p)).join('')}</div>`
+            }
+          `;
+        },
+
+        // Placeholder views for consistency
+        auctions() { return '<h2>🚧 Live Auctions (Demnächst)</h2>'; },
+        tracking() { return '<h2>🚧 Tracking (Demnächst)</h2>'; },
+        changelog() { return '<h2>🚧 Changelog</h2>'; }
+      },
+
+      // --- COMPONENTS ---
+      components: {
+        productCard(p) {
+          const price = app.calculateCurrentPrice(p);
+          return `
+            <div class="product-card reveal-card" onclick="app.nav('product', ${p.id})">
+              <div class="badge-live"><i class="fas fa-arrow-down"></i> -€${p.dropRate}/min</div>
+              <div class="img-box"><img src="${p.img}" alt="${p.title}" loading="lazy"></div>
+              <div style="padding:15px; flex:1; display:flex; flex-direction:column;">
+                <div style="font-weight:700; font-size:1.1rem; margin-bottom:5px;">${p.title}</div>
+                <div style="color:#666; font-size:0.9rem; margin-bottom:auto;">${app.state.categories[p.cat]?.name || 'Stuff'}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+                  <div class="price-box" data-price-id="${p.id}">€${price.toFixed(2)}</div>
+                  <div style="font-size:0.8rem; color:var(--danger);">Min: €${p.minPrice}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      },
+
+      // --- ACTIONS ---
+      handleFilePreview(input) {
+        if (input.files && input.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const preview = document.querySelector('#imagePreview img');
+            preview.src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'block';
+            document.getElementById('dropArea').style.display = 'none';
+          }
+          reader.readAsDataURL(input.files[0]);
+        }
+      },
+
+      handleUpload(e) {
+        e.preventDefault();
+        const form = e.target;
+        
+        // Handle File Reading (Asyncish)
+        const fileInput = form.querySelector('input[name="imageFile"]');
+        const reader = new FileReader();
+        
+        reader.onload = (event) => {
+          const newProduct = {
+            id: Date.now(),
+            title: form.title.value,
+            desc: form.desc.value,
+            startPrice: parseFloat(form.startPrice.value),
+            minPrice: parseFloat(form.minPrice.value),
+            dropRate: parseFloat(form.dropRate.value),
+            startTime: Date.now(), // Timer starts NOW
+            cat: form.category.value,
+            img: event.target.result, // Base64 Data URL
+            seller: this.state.user.name
+          };
+          
+          this.state.products.unshift(newProduct);
+          this.closeModals();
+          this.toast('Drop ist online! 🚀', 'success');
+          this.nav('profile'); // Show it in profile
+        };
+
+        if (fileInput.files[0]) {
+          reader.readAsDataURL(fileInput.files[0]);
+        } else {
+          alert("Bild fehlt, Brudi!");
+        }
+      },
+
+      filterCat(cat) {
+        if (cat === 'all') {
+          this.nav('home'); // Reload full list (lazy implementation)
+        } else {
+          // Manually render filtered list into grid
+          const filtered = this.state.products.filter(p => p.cat === cat);
+          document.getElementById('productGrid').innerHTML = filtered.map(p => this.components.productCard(p)).join('');
+        }
+      },
+
+      search(term) {
+        if (this.state.page !== 'home') this.nav('home');
+        const q = term.toLowerCase();
+        const filtered = this.state.products.filter(p => p.title.toLowerCase().includes(q));
+        document.getElementById('productGrid').innerHTML = filtered.map(p => this.components.productCard(p)).join('');
+      },
+
+      // --- UTILS ---
+      toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('active');
+        document.getElementById('sidebarOverlay').classList.toggle('active');
+      },
+      closeSidebar() {
+        document.getElementById('sidebar').classList.remove('active');
+        document.getElementById('sidebarOverlay').classList.remove('active');
+      },
+      openUploadModal() { document.getElementById('uploadModal').classList.add('open'); },
+      closeModals() { document.querySelectorAll('.modal-backdrop').forEach(el => el.classList.remove('open')); },
+      
+      toast(msg, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        el.className = 'toast';
+        el.style.borderLeftColor = type === 'success' ? 'var(--success)' : 'var(--main)';
+        el.innerHTML = `<span>${msg}</span> <i class="fas ${type==='success'?'fa-check-circle':'fa-info-circle'}"></i>`;
+        container.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+      },
+
+      setupFluentEffect() {
+        const cards = document.querySelectorAll(".reveal-card");
+        document.body.onmousemove = e => {
+          for(const card of cards) {
+            const rect = card.getBoundingClientRect();
+            card.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
+            card.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
+          }
+        };
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => app.init());
+  </script>
+</body>
+</html>
