@@ -3,698 +3,865 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>OneDrop - Live Price Drop Marketplace</title>
+  <title>OneDrop - AI Powered Market</title>
+  
+  <!-- Fonts: Space Grotesk (Modern/Tech), Inter (Clean UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
   <style>
-    /* --- VARIABLES & BASE --- */
+    /* --- DESIGN SYSTEM V3: GLASS & CLEAN --- */
     :root {
-      --main: #00ffcc;
-      --main-dark: #00d6b3;
-      --main-glow: rgba(0, 255, 204, 0.4);
-      --bg-deep: #050505;
-      --bg-surface: #121212;
+      --accent: #8b5cf6; /* Modern Violet */
+      --accent-glow: rgba(139, 92, 246, 0.4);
+      --accent-text: #a78bfa;
+      
+      --bg-body: #050505;
+      --bg-card: rgba(20, 20, 20, 0.6);
       --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-highlight: rgba(255, 255, 255, 0.15);
+      
       --text-main: #ffffff;
-      --text-muted: #a0a0a0;
-      --radius: 16px;
-      --nav-height: 70px;
-      --sidebar-width: 280px;
-      --danger: #ff4757;
-      --success: #2ed573;
+      --text-muted: #9ca3af;
+      
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      
+      --nav-height: 80px;
+      --success-color: #22c55e;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     
     body {
-      background-color: var(--bg-deep);
+      background-color: var(--bg-body);
       background-image: 
-        radial-gradient(circle at 10% 20%, rgba(0, 255, 204, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(77, 171, 247, 0.05) 0%, transparent 40%);
+        radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.05) 0%, transparent 50%);
       color: var(--text-main);
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: var(--font-body);
       overflow-x: hidden;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      display: flex; flex-direction: column;
     }
 
-    /* --- ANIMATIONS & UTILS --- */
-    .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    /* --- TYPOGRAPHY --- */
+    h1, h2, h3, .brand, .price-display { font-family: var(--font-display); }
+
+    /* --- ANIMATIONS --- */
+    .fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
     
-    .price-drop-anim { animation: flashRed 1s ease; }
-    @keyframes flashRed { 0% { color: var(--danger); transform: scale(1.1); } 100% { color: var(--main); transform: scale(1); } }
+    .pulse-dot { animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); } }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: var(--bg-deep); }
-    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-
-    /* --- FLUENT REVEAL EFFECT --- */
-    .reveal-card {
-      position: relative;
-      background: var(--bg-surface);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      transition: border-color 0.3s;
-    }
-    .reveal-card:hover { border-color: rgba(255, 255, 255, 0.2); }
-    .reveal-card::after {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: radial-gradient(600px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(255,255,255,0.06), transparent 40%);
-      z-index: 1;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .reveal-card:hover::after { opacity: 1; }
-
-    /* --- LAYOUT --- */
+    /* --- HEADER (GLASS) --- */
     header {
       position: fixed; top: 0; left: 0; right: 0;
       height: var(--nav-height);
-      background: rgba(5, 5, 5, 0.85);
+      background: rgba(5, 5, 5, 0.7);
       backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--glass-border);
       z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 20px;
+      padding: 0 5%;
     }
 
     .brand {
-      display: flex; align-items: center; gap: 12px;
-      font-weight: 700; font-size: 1.2rem; color: var(--main);
-      text-transform: uppercase; letter-spacing: 1px;
+      font-weight: 700; font-size: 1.5rem; letter-spacing: -0.03em;
+      display: flex; align-items: center; gap: 10px;
     }
+    .brand-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 10px var(--accent); }
+
+    .nav-actions { display: flex; gap: 20px; align-items: center; }
+    .icon-btn { color: var(--text-main); font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+    .icon-btn:hover { color: var(--accent); }
+
+    /* --- SLIDER (NEW ARRIVALS) --- */
+    .marquee-container {
+      margin-top: calc(var(--nav-height) + 20px);
+      margin-bottom: 40px;
+      overflow: hidden;
+      border-top: 1px solid var(--glass-border);
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.02);
+      padding: 15px 0;
+    }
+    .marquee-content {
+      display: flex; gap: 50px; white-space: nowrap;
+      animation: scroll 25s linear infinite;
+    }
+    .marquee-item {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-display); font-size: 1rem; color: var(--text-muted);
+    }
+    .marquee-item span { color: var(--text-main); font-weight: 600; }
+    @keyframes scroll { 
+        0% { transform: translateX(0); } 
+        100% { transform: translateX(-50%); } 
+    }
+
+    /* --- GRID LAYOUT --- */
+    main { padding: 0 5%; padding-bottom: 120px; max-width: 1600px; margin: 0 auto; width: 100%; }
     
-    .logo-icon {
-      width: 36px; height: 36px;
-      border-radius: 50%; border: 2px solid var(--main);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 0 15px var(--main-glow);
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 30px;
     }
 
-    /* --- SIDEBAR --- */
-    .sidebar-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(4px); z-index: 998;
-      opacity: 0; pointer-events: none; transition: opacity 0.3s;
-    }
-    .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
-
-    .sidebar {
-      position: fixed; top: 0; left: 0; bottom: 0;
-      width: var(--sidebar-width); background: #0f0f0f;
-      border-right: 1px solid var(--glass-border);
-      transform: translateX(-100%);
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 999; padding: 20px;
-      display: flex; flex-direction: column; gap: 20px;
-    }
-    .sidebar.active { transform: translateX(0); }
-
-    .nav-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 12px 16px; color: var(--text-muted);
-      text-decoration: none; border-radius: 8px; transition: 0.2s;
-      cursor: pointer;
-    }
-    .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
-    .nav-item.active { background: rgba(0, 255, 204, 0.1); color: var(--main); border: 1px solid rgba(0, 255, 204, 0.2); }
-
-    /* --- MAIN --- */
-    main {
-      margin-top: var(--nav-height); padding: 20px;
-      max-width: 1400px; width: 100%;
-      margin-left: auto; margin-right: auto;
-      padding-bottom: 100px;
-    }
-
-    /* --- GRID & CARDS --- */
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-
-    .product-card {
+    /* --- PRODUCT CARD V3 --- */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      position: relative;
       display: flex; flex-direction: column;
-      position: relative; z-index: 2; cursor: pointer;
-      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer; /* Enable click for detail modal */
     }
-    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10; }
+    .card:hover {
+      transform: translateY(-8px);
+      border-color: var(--glass-highlight);
+      box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+    }
 
-    .img-box {
-      aspect-ratio: 4/3; overflow: hidden;
-      border-radius: 8px; margin: 10px; position: relative;
+    .card-img-container {
+      position: relative;
+      aspect-ratio: 1; 
+      overflow: hidden;
+      background: #111;
     }
-    .img-box img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
-    .product-card:hover .img-box img { transform: scale(1.1); }
+    .card-img-container img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.7s ease;
+    }
+    .card:hover .card-img-container img { transform: scale(1.05); }
+
+    .card-badges {
+      position: absolute; top: 15px; left: 15px; right: 15px;
+      display: flex; justify-content: space-between;
+    }
+    .badge {
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+      padding: 6px 12px; border-radius: 30px;
+      font-size: 0.75rem; font-weight: 500; letter-spacing: 0.5px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .badge.accent { background: var(--accent); border-color: var(--accent); color: white; }
+
+    .card-info { padding: 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
     
-    .badge-live {
-      position: absolute; top: 10px; right: 10px;
-      background: var(--danger); color: white;
-      padding: 4px 10px; border-radius: 12px;
-      font-size: 0.75rem; font-weight: bold;
-      animation: pulse 1.5s infinite;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    .card-title { font-size: 1.2rem; font-weight: 500; margin-bottom: 5px; }
+    .card-sub { font-size: 0.85rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; }
 
-    .price-box {
-      background: rgba(0, 255, 204, 0.1);
-      border: 1px solid rgba(0, 255, 204, 0.2);
-      padding: 6px 12px; border-radius: 8px;
-      color: var(--main); font-weight: 700;
-      font-family: monospace; font-size: 1.2rem;
-      min-width: 100px; text-align: center;
+    .price-row {
+      margin-top: auto; padding-top: 15px;
+      border-top: 1px solid var(--glass-border);
+      display: flex; justify-content: space-between; align-items: flex-end;
     }
-
-    /* --- PRODUCT DETAIL VIEW --- */
-    .detail-container {
-      display: grid; grid-template-columns: 1fr; gap: 30px;
-    }
-    @media(min-width: 768px) { .detail-container { grid-template-columns: 1.2fr 1fr; } }
-
-    .detail-img { width: 100%; border-radius: var(--radius); border: 1px solid var(--glass-border); }
-    .detail-info h1 { font-size: 2.5rem; margin-bottom: 10px; line-height: 1.1; }
-    .detail-desc { color: var(--text-muted); line-height: 1.6; margin: 20px 0; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; }
     
-    .timer-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255, 71, 87, 0.1); color: var(--danger);
-      padding: 5px 12px; border-radius: 20px; font-weight: 600; font-size: 0.9rem;
-      margin-bottom: 20px; border: 1px solid rgba(255, 71, 87, 0.2);
+    .price-main {
+      font-size: 1.8rem; font-weight: 700; color: var(--text-main);
+      font-family: var(--font-display); line-height: 1;
     }
+    .price-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
 
-    /* --- PROFILE --- */
-    .profile-header {
-      display: flex; align-items: center; gap: 20px;
-      padding: 30px; background: var(--bg-surface);
-      border-radius: var(--radius); border: 1px solid var(--glass-border);
-      margin-bottom: 30px;
+    /* --- TIMER CIRCLE --- */
+    .timer-ring { position: relative; width: 40px; height: 40px; }
+    .timer-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .timer-circle-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 3; }
+    .timer-circle-fg { 
+      fill: none; stroke: var(--accent); stroke-width: 3; 
+      stroke-dasharray: 100; stroke-dashoffset: 0; 
+      transition: stroke-dashoffset 1s linear; 
     }
-    .avatar-large {
-      width: 100px; height: 100px; border-radius: 50%;
-      border: 3px solid var(--main); object-fit: cover;
+    .timer-text {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; font-family: monospace;
     }
 
     /* --- FAB --- */
-    .fab {
-      position: fixed; bottom: 80px; right: 20px;
-      width: 60px; height: 60px;
-      background: var(--main); color: #000;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem;
-      box-shadow: 0 0 20px var(--main-glow);
-      cursor: pointer; transition: 0.3s; z-index: 99;
+    .fab-btn {
+      position: fixed; bottom: 40px; right: 40px;
+      width: 64px; height: 64px;
+      background: var(--accent); color: white;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; cursor: pointer;
+      box-shadow: 0 0 30px var(--accent-glow);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 90;
     }
-    .fab:hover { transform: rotate(90deg) scale(1.1); }
-    @media(min-width: 769px) { .fab { bottom: 30px; } }
+    .fab-btn:hover { transform: scale(1.1); }
 
-    /* --- MODALS & FORMS --- */
+    /* --- MODALS (CLEAN) --- */
     .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
-      backdrop-filter: blur(8px); z-index: 2000;
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; pointer-events: none; transition: 0.3s;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px);
+      z-index: 1000; display: none; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.3s;
     }
-    .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+    .modal-backdrop.active { display: flex; opacity: 1; }
     
-    .modal {
-      background: #1a1a1a; width: 90%; max-width: 500px;
-      border-radius: var(--radius); border: 1px solid var(--glass-border);
-      padding: 25px; transform: scale(0.9) translateY(20px);
-      transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    .modal-content {
+      background: #111; border: 1px solid var(--glass-border);
+      width: 90%; max-width: 500px; padding: 40px;
+      border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      transform: translateY(20px); transition: transform 0.3s;
       max-height: 90vh; overflow-y: auto;
     }
-    .modal-backdrop.open .modal { transform: scale(1) translateY(0); }
+    .modal-backdrop.active .modal-content { transform: translateY(0); }
 
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; color: var(--text-muted); margin-bottom: 8px; font-size: 0.9rem; }
-    .form-control {
-      width: 100%; background: #222; border: 1px solid #333;
-      padding: 12px; border-radius: 8px; color: white; transition: 0.3s;
+    /* Inputs Clean */
+    input, select, textarea {
+      width: 100%; background: #1a1a1a; border: 1px solid #333;
+      color: white; padding: 16px; border-radius: 12px;
+      margin-bottom: 20px; font-family: var(--font-body); font-size: 1rem;
+      transition: border-color 0.2s;
     }
-    .form-control:focus { border-color: var(--main); outline: none; }
+    input:focus { outline: none; border-color: var(--accent); }
+    label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+
+    .btn-primary {
+      width: 100%; background: var(--accent); color: white;
+      padding: 16px; border-radius: 12px; font-weight: 600;
+      border: none; cursor: pointer; font-size: 1rem; transition: 0.2s;
+    }
+    .btn-primary:hover { background: #7c4dff; transform: scale(0.99); }
     
-    .btn-main {
-      width: 100%; padding: 14px; background: var(--main);
-      color: black; border: none; border-radius: 8px;
-      font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
-      transition: 0.2s; margin-top: 10px;
+    .btn-secondary {
+        width: 100%; background: #333; color: white;
+        padding: 16px; border-radius: 12px; font-weight: 600;
+        border: none; cursor: pointer; font-size: 1rem; margin-top: 10px;
     }
-    .btn-main:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--main-glow); }
 
-    .file-drop-area {
-      border: 2px dashed #444; border-radius: 8px;
-      padding: 30px; text-align: center; cursor: pointer;
-      transition: 0.3s; position: relative;
+    .btn-ai-ghost {
+      background: transparent; border: 1px solid var(--glass-border); color: var(--accent-text);
+      display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+      padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.2s;
     }
-    .file-drop-area:hover { border-color: var(--main); background: rgba(0,255,204,0.05); }
-    .file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .btn-ai-ghost:hover { border-color: var(--accent); background: rgba(139, 92, 246, 0.05); }
 
-    /* --- TOAST --- */
-    .toast-container { position: fixed; top: 90px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; }
+    /* --- AI VERDICT PILL --- */
+    .ai-verdict {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 16px; border-radius: 100px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+      cursor: pointer; transition: 0.2s;
+    }
+    .ai-verdict:hover { background: rgba(255,255,255,0.08); }
+    .status-dot { 
+        width: 8px; height: 8px; border-radius: 50%; 
+        background: var(--text-muted); /* Default Neutral */
+    }
+
+    /* Loading Spinner */
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* --- TOAST NOTIFICATIONS --- */
+    #toastContainer {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        z-index: 2000;
+        display: flex; flex-direction: column; gap: 10px;
+        width: 90%; max-width: 400px;
+    }
     .toast {
-      background: rgba(20, 20, 20, 0.95); border-left: 4px solid var(--main);
-      padding: 15px 20px; border-radius: 4px; color: white; min-width: 300px;
-      animation: slideInRight 0.3s forwards; display: flex; align-items: center; justify-content: space-between;
+        background: #111; border: 1px solid var(--glass-border);
+        padding: 15px 20px; border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        display: flex; align-items: center; justify-content: space-between;
+        opacity: 1; transition: opacity 0.3s;
+        border-left: 4px solid var(--accent);
+        font-size: 0.9rem;
     }
-    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .toast.success { border-left-color: var(--success-color); }
+    .toast i { color: var(--accent); }
+    .toast.success i { color: var(--success-color); }
 
+    /* --- DETAIL MODAL SPECIFIC STYLES --- */
+    .detail-img {
+        width: 100%; aspect-ratio: 1; object-fit: cover;
+        border-radius: 16px; margin-bottom: 20px;
+        background: #222;
+    }
+    .detail-price {
+        font-size: 2.5rem; font-weight: 700; color: var(--accent);
+        font-family: var(--font-display); line-height: 1;
+        margin-bottom: 15px;
+    }
+    .detail-info-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 10px 0; border-bottom: 1px dashed rgba(255,255,255,0.05);
+        font-size: 0.9rem;
+    }
+    .detail-info-row span:first-child { color: var(--text-muted); }
   </style>
 </head>
 <body>
 
-  <!-- SIDEBAR -->
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-  <aside class="sidebar" id="sidebar">
-    <div class="brand" style="margin-bottom: 30px;">
-      <div class="logo-icon"><i class="fas fa-gem"></i></div>
-      OneDrop
-    </div>
-    <nav style="display: flex; flex-direction: column; gap: 5px;">
-      <a class="nav-item active" onclick="app.nav('home')"><i class="fas fa-home"></i> Startseite</a>
-      <a class="nav-item" onclick="app.nav('profile')"><i class="fas fa-user-astronaut"></i> Mein Profil</a>
-      <a class="nav-item" onclick="app.nav('auctions')"><i class="fas fa-gavel"></i> Live-Auktionen</a>
-      <a class="nav-item" onclick="app.nav('tracking')"><i class="fas fa-truck"></i> Sendungsverfolgung</a>
-      <a class="nav-item" onclick="app.nav('changelog')"><i class="fas fa-code-branch"></i> Changelog</a>
-    </nav>
-  </aside>
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer"></div>
 
   <!-- HEADER -->
   <header>
-    <div style="display: flex; align-items: center; gap: 15px;">
-      <button onclick="app.toggleSidebar()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;"><i class="fas fa-bars"></i></button>
-      <div class="brand" onclick="app.nav('home')" style="cursor:pointer;">
-        <div class="logo-icon"><i class="fas fa-gem"></i></div>
-        <span style="display: none; md:display:block;">OneDrop</span>
-      </div>
+    <div class="brand" onclick="window.scrollTo(0,0)">
+      <div class="brand-dot"></div> OneDrop
     </div>
-
-    <div style="flex:1; max-width:400px; margin:0 20px;">
-      <input type="text" class="form-control" style="border-radius:20px; background:rgba(255,255,255,0.05);" placeholder="Search the drop..." oninput="app.search(this.value)">
-    </div>
-
-    <div style="display: flex; gap: 15px; align-items: center;">
-      <div onclick="app.nav('profile')" class="logo-icon" style="width: 35px; height: 35px; border-color: #555; cursor: pointer; overflow:hidden;">
-        <img src="https://placehold.co/100x100/1a1a1a/FFF?text=ME" style="width:100%; height:100%; object-fit:cover;" id="headerAvatar">
+    <div class="nav-actions">
+      <i class="fas fa-search icon-btn"></i>
+      <div style="width:32px; height:32px; background:#333; border-radius:50%; overflow:hidden;">
+        <img src="https://placehold.co/100x100/333/FFF?text=ME" onerror="this.src='https://placehold.co/100x100/333/FFF?text=ME'" style="width:100%; height:100%; object-fit:cover;">
       </div>
     </div>
   </header>
 
-  <!-- MAIN CONTAINER -->
-  <main id="mainContainer"></main>
+  <!-- MARQUEE / SLIDER -->
+  <div class="marquee-container">
+    <div class="marquee-content" id="marquee">
+      <!-- Filled via JS -->
+    </div>
+  </div>
 
-  <!-- FLOATING UPLOAD BUTTON -->
-  <div class="fab" onclick="app.openUploadModal()">
+  <!-- MAIN GRID -->
+  <main id="app">
+    <h2 style="margin-bottom: 30px; font-size: 2rem; font-weight:300;">Live <span style="font-weight:700">Market</span></h2>
+    <div class="grid" id="productGrid"></div>
+  </main>
+
+  <!-- CREATE BUTTON -->
+  <div class="fab-btn" onclick="app.openModal('upload')">
     <i class="fas fa-plus"></i>
+  </div>
+
+  <!-- AI VERDICT MODAL -->
+  <div class="modal-backdrop" id="aiModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="font-size:1.5rem;"><i class="fas fa-sparkles" style="color:var(--accent)"></i> Gemini Insight</h3>
+        <i class="fas fa-times" onclick="app.closeModals()" style="cursor:pointer; padding:10px;"></i>
+      </div>
+      <div id="aiText" style="line-height:1.6; color:#ccc; margin-bottom:30px;">
+        Loading analysis...
+      </div>
+      <button class="btn-primary" onclick="app.closeModals()">Verstanden</button>
+    </div>
   </div>
 
   <!-- UPLOAD MODAL -->
   <div class="modal-backdrop" id="uploadModal">
-    <div class="modal reveal-card">
-      <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-        <h2 style="margin:0;"><i class="fas fa-cloud-upload-alt"></i> New Drop</h2>
-        <button onclick="app.closeModals()" style="background:none; border:none; color:#666; font-size:1.5rem; cursor:pointer;">&times;</button>
-      </div>
-      
-      <form onsubmit="app.handleUpload(event)">
-        <!-- Image Upload -->
-        <div class="form-group">
-          <label>Produktbild</label>
-          <div class="file-drop-area" id="dropArea">
-            <i class="fas fa-images" style="font-size:2rem; color:var(--text-muted); margin-bottom:10px;"></i>
-            <p style="color:var(--text-muted); margin:0; font-size:0.9rem;">Bild hier reinziehen oder klicken</p>
-            <input type="file" class="file-input" name="imageFile" accept="image/*" required onchange="app.handleFilePreview(this)">
-          </div>
-          <div id="imagePreview" style="margin-top:10px; display:none;">
-            <img src="" style="width:100%; height:150px; object-fit:cover; border-radius:8px; border:1px solid #444;">
-          </div>
+    <div class="modal-content">
+      <h3 style="margin-bottom:25px; font-size:1.5rem;">Create Drop</h3>
+      <form onsubmit="app.createDrop(event)">
+        <label>Produktname</label>
+        <input type="text" name="title" id="inTitle" placeholder="z.B. Stone Island Crewneck" required>
+        
+        <!-- AI Features Row -->
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button type="button" class="btn-ai-ghost" onclick="app.predictPriceReal()">
+                <i class="fas fa-chart-line"></i> ✨ Gemini Pricing
+            </button>
+            <button type="button" class="btn-ai-ghost" onclick="app.generateDescriptionReal()">
+                <i class="fas fa-pen-fancy"></i> ✨ Auto-Desc
+            </button>
         </div>
 
-        <div class="form-group">
-          <label>Titel</label>
-          <input type="text" class="form-control" name="title" required placeholder="z.B. Supreme Brick">
-        </div>
-
-        <div class="form-group">
-          <label>Beschreibung</label>
-          <textarea class="form-control" name="desc" rows="3" placeholder="Zustand, Größe, Vibe..."></textarea>
-        </div>
-
-        <!-- Price Logic -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-          <div class="form-group">
+        <div style="display:flex; gap:15px;">
+          <div style="flex:1;">
             <label>Startpreis (€)</label>
-            <input type="number" class="form-control" name="startPrice" required placeholder="200">
+            <input type="number" name="start" id="inStart" placeholder="250" required>
           </div>
-          <div class="form-group">
-            <label>Min. Preis (€)</label>
-            <input type="number" class="form-control" name="minPrice" required placeholder="50">
+          <div style="flex:1;">
+            <label>Drop Step (€)</label>
+            <input type="number" name="step" id="inStep" value="5" placeholder="5" required>
           </div>
         </div>
         
-        <div class="form-group">
-          <label>Preis-Drop pro Minute (€)</label>
-          <input type="number" class="form-control" name="dropRate" value="1" min="0.1" step="0.1">
-          <small style="color:var(--text-muted); font-size:0.75rem;">Der Preis sinkt automatisch jede Minute.</small>
-        </div>
+        <label>Drop Intervall (Sekunden)</label>
+        <select name="interval" id="inInterval">
+          <option value="10">Aggressiv (10s)</option>
+          <option value="30">Schnell (30s)</option>
+          <option value="60" selected>Standard (60s)</option>
+        </select>
 
-        <div class="form-group">
-          <label>Kategorie</label>
-          <select class="form-control" name="category">
-            <option value="fashion">Mode / Streetwear</option>
-            <option value="electronics">Tech Stuff</option>
-            <option value="sneakers">Sneakers</option>
-            <option value="misc">Random Shit</option>
-          </select>
-        </div>
+        <label>Beschreibung (Optional)</label>
+        <textarea name="description" id="inDesc" rows="3" placeholder="Zustand, Details..."></textarea>
 
-        <button type="submit" class="btn-main">Drop It Like It's Hot 🔥</button>
+        <button type="submit" class="btn-primary">Drop Veröffentlichen</button>
       </form>
     </div>
   </div>
 
-  <div class="toast-container" id="toastContainer"></div>
+  <!-- DETAIL MODAL (NEW FEATURE) -->
+  <div class="modal-backdrop" id="detailModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 id="detailTitle" style="font-size:1.8rem; font-family:var(--font-display)">Product Detail</h3>
+        <i class="fas fa-times" onclick="app.closeModals()" style="cursor:pointer; padding:10px;"></i>
+      </div>
+      
+      <div id="detailContent">
+        <!-- Content filled by JS -->
+      </div>
+      
+      <div style="margin-top: 30px; text-align: center;">
+        <button class="btn-primary" id="buyButton">BUY NOW</button>
+        <button class="btn-secondary" onclick="app.closeModals()">Zurück</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- JAVASCRIPT LOGIC -->
   <script>
+    const apiKey = ""; // System provides this
+
+    // Utility function for exponential backoff (for robust API calls)
+    async function fetchWithRetry(url, options, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (response.ok) return response;
+                // If response is not ok, throw error to trigger retry
+                throw new Error(`HTTP error! status: ${response.status}`);
+            } catch (error) {
+                if (i < retries - 1) {
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    throw error; // Last retry failed
+                }
+            }
+        }
+    }
+
     const app = {
       state: {
-        page: 'home',
-        user: {
-          name: 'DropMaster_2000',
-          joined: '2025',
-          sales: 12,
-          avatar: 'https://placehold.co/200x200/00ffcc/000?text=DM'
-        },
-        products: [], // Loaded via init
-        categories: {
-          'all': { icon: 'fa-layer-group', name: 'Alles' },
-          'fashion': { icon: 'fa-tshirt', name: 'Mode' },
-          'electronics': { icon: 'fa-microchip', name: 'Tech' },
-          'sneakers': { icon: 'fa-shoe-prints', name: 'Kicks' },
-          'misc': { icon: 'fa-box-open', name: 'Sonstiges' }
-        },
-        timerInterval: null
+        products: [
+          {
+            id: 1,
+            title: "Acne Studios Scarf",
+            img: "https://placehold.co/800x800/1a1a1a/e5e5e5?text=ACNE",
+            startPrice: 180.00,
+            minPrice: 90.00,
+            dropAmount: 2.50,
+            dropInterval: 15,
+            startTime: Date.now() - (1000 * 5),
+            category: 'Accessory',
+            description: "Classic oversized scarf. Worn twice. No flaws. Ein Must-have für diesen Winter, hält dich warm und sieht krass aus."
+          },
+          {
+            id: 2,
+            title: "Sony PS5 Pro (Sealed)",
+            img: "https://placehold.co/800x800/1a1a1a/8b5cf6?text=PS5+PRO",
+            startPrice: 850.00,
+            minPrice: 600.00,
+            dropAmount: 10.00,
+            dropInterval: 60,
+            startTime: Date.now() - (1000 * 30),
+            category: 'Tech',
+            description: "Brand new, sealed. Receipt available. Der heilige Gral unter den Konsolen, direkt zum Release gekauft, jetzt dein Cop."
+          },
+          {
+            id: 3,
+            title: "Jordan 4 Black Canvas",
+            img: "https://placehold.co/800x800/1a1a1a/00d2ff?text=J4",
+            startPrice: 320.00,
+            minPrice: 150.00,
+            dropAmount: 5.00,
+            dropInterval: 45,
+            startTime: Date.now() - (1000 * 120),
+            category: 'Sneaker',
+            description: "Size US 10. Deadstock condition. Cleanest Pair auf dem Market, wer hier pennt, hat den Drop verpasst."
+          }
+        ]
       },
 
       init() {
-        // Mock Data with Timestamps for live price drops
-        const now = Date.now();
-        this.state.products = [
-          { 
-            id: 1, title: 'Sony WH-1000XM5', desc: 'Noise Cancelling King. Nur einmal getragen, wie neu. Box ist dabei.', 
-            startPrice: 299, minPrice: 200, dropRate: 1, startTime: now - (1000 * 60 * 15), // Started 15 mins ago
-            cat: 'electronics', img: 'https://placehold.co/600x400/111/00ffcc?text=Sony+XM5', seller: 'AudioDave' 
-          },
-          { 
-            id: 2, title: 'Jordan 1 Chicago', desc: 'Lost & Found. Größe 44. Deadstock. Rechnung vorhanden.', 
-            startPrice: 450, minPrice: 300, dropRate: 2, startTime: now - (1000 * 60 * 45), // Started 45 mins ago
-            cat: 'sneakers', img: 'https://placehold.co/600x400/111/ff4757?text=Jordan+1', seller: 'Kicks4Life' 
-          },
-          { 
-            id: 3, title: 'Vintage iPhone X', desc: 'Funktioniert noch, Screen hat Riss. Für Bastler.', 
-            startPrice: 150, minPrice: 50, dropRate: 0.5, startTime: now - (1000 * 60 * 120), // 2 hours ago
-            cat: 'electronics', img: 'https://placehold.co/600x400/111/00d6b3?text=iPhone', seller: 'TechBasement' 
-          }
-        ];
-
-        this.nav('home');
-        this.setupFluentEffect();
-        
-        // Global Price Ticker
-        this.state.timerInterval = setInterval(() => this.updatePrices(), 1000);
-        console.log("OneDrop Engine V2 Started 🚀");
+        this.renderGrid();
+        this.renderMarquee();
+        setInterval(() => this.tick(), 100);
       },
 
-      // --- PRICING LOGIC ---
-      calculateCurrentPrice(product) {
-        const elapsedMinutes = Math.floor((Date.now() - product.startTime) / 60000);
-        const dropAmount = elapsedMinutes * product.dropRate;
-        let current = product.startPrice - dropAmount;
-        return current < product.minPrice ? product.minPrice : current;
-      },
-
-      updatePrices() {
-        // Update DOM elements marked with 'data-price-id'
-        this.state.products.forEach(p => {
-          const price = this.calculateCurrentPrice(p);
-          const els = document.querySelectorAll(`[data-price-id="${p.id}"]`);
-          
-          els.forEach(el => {
-            const oldPrice = parseFloat(el.innerText.replace('€', ''));
-            if (price !== oldPrice) {
-              el.innerText = `€${price.toFixed(2)}`;
-              el.classList.remove('price-drop-anim');
-              void el.offsetWidth; // trigger reflow
-              el.classList.add('price-drop-anim');
-            }
-          });
-        });
-      },
-
-      // --- NAVIGATION ---
-      nav(pageId, param = null) {
-        this.state.page = pageId;
-        const container = document.getElementById('mainContainer');
-        
-        // Active Sidebar State
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        // Mapping simple for demo
-        const links = document.querySelectorAll('.sidebar .nav-item');
-        if(pageId === 'home') links[0]?.classList.add('active');
-        if(pageId === 'profile') links[1]?.classList.add('active');
-        if(pageId === 'auctions') links[2]?.classList.add('active');
-        if(pageId === 'tracking') links[3]?.classList.add('active');
-
-        this.closeSidebar();
-
-        // Render content
-        container.innerHTML = `<div class="fade-in">${this.renderPage(pageId, param)}</div>`;
-        this.setupFluentEffect();
-      },
-
-      renderPage(page, param) {
-        switch(page) {
-          case 'home': return this.views.home();
-          case 'product': return this.views.productDetail(param);
-          case 'profile': return this.views.profile();
-          case 'auctions': return this.views.auctions();
-          case 'tracking': return this.views.tracking();
-          case 'changelog': return this.views.changelog();
-          default: return `<h1>404 - Lost in Space</h1>`;
-        }
-      },
-
-      // --- VIEWS ---
-      views: {
-        home() {
-          const cats = Object.entries(app.state.categories).map(([key, val]) => 
-            `<button class="cat-pill" style="margin-right:10px; background:rgba(255,255,255,0.05); border:1px solid #333; padding:8px 16px; border-radius:20px; color:#aaa; cursor:pointer;" onclick="app.filterCat('${key}')">
-               <i class="fas ${val.icon}"></i> ${val.name}
-             </button>`
-          ).join('');
-
-          const productsHtml = app.state.products.map(p => app.components.productCard(p)).join('');
-
-          return `
-            <div style="margin-bottom:20px; overflow-x:auto; white-space:nowrap; padding-bottom:10px;">${cats}</div>
-            <h2 style="margin-bottom:20px; font-weight:800;">🔥 Fresh Drops <span style="font-size:0.5em; color:var(--danger); vertical-align:middle;">LIVE PRICES</span></h2>
-            <div class="grid" id="productGrid">${productsHtml}</div>
-          `;
-        },
-
-        productDetail(id) {
-          const p = app.state.products.find(x => x.id == id);
-          if (!p) return '<h2>Artikel nicht gefunden :/</h2>';
-          const currentPrice = app.calculateCurrentPrice(p);
-
-          return `
-            <div class="detail-container">
-              <div>
-                <img src="${p.img}" class="detail-img reveal-card">
-              </div>
-              <div class="detail-info">
-                <div onclick="app.nav('home')" style="cursor:pointer; margin-bottom:10px; color:var(--main);"><i class="fas fa-arrow-left"></i> Back</div>
-                <div class="timer-badge"><i class="fas fa-history"></i> Preis fällt um €${p.dropRate}/min</div>
-                <h1>${p.title}</h1>
-                <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
-                  <span style="font-size:2.5rem; font-weight:800; color:var(--main);" data-price-id="${p.id}">€${currentPrice.toFixed(2)}</span>
-                  <span style="color:var(--text-muted); text-decoration:line-through;">Start: €${p.startPrice}</span>
-                </div>
-                
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
-                  <div style="width:40px; height:40px; background:#333; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                    <i class="fas fa-user"></i>
-                  </div>
-                  <div>
-                    <div style="font-weight:bold;">${p.seller}</div>
-                    <div style="font-size:0.8rem; color:#888;">Trusted Seller</div>
-                  </div>
-                </div>
-
-                <button class="btn-main" onclick="app.toast('Gönnung erfolgreich! 🛒', 'success')">COP THAT NOW</button>
-                <div class="detail-desc">
-                  <h3 style="color:white; margin-bottom:10px;">Beschreibung</h3>
-                  <p>${p.desc || 'Keine Beschreibung verfügbar.'}</p>
-                </div>
-              </div>
-            </div>
-          `;
-        },
-
-        profile() {
-          const myDrops = app.state.products.filter(p => p.seller === app.state.user.name);
-          return `
-            <div class="profile-header reveal-card">
-              <img src="${app.state.user.avatar}" class="avatar-large">
-              <div>
-                <h1 style="margin:0;">${app.state.user.name}</h1>
-                <div style="color:var(--text-muted); margin-top:5px;">
-                  Mitglied seit ${app.state.user.joined} • ${app.state.user.sales} Verkäufe
-                </div>
-              </div>
-              <div style="margin-left:auto; text-align:right;">
-                <div style="font-size:1.5rem; font-weight:bold; color:var(--main);">€1,337.00</div>
-                <small style="color:#666;">Guthaben</small>
-              </div>
-            </div>
-
-            <h2>Meine aktiven Drops</h2>
-            ${myDrops.length === 0 ? '<p style="color:#666;">Du hast noch nix gedroppt. Mach mal was!</p>' : 
-              `<div class="grid">${myDrops.map(p => app.components.productCard(p)).join('')}</div>`
-            }
-          `;
-        },
-
-        // Placeholder views for consistency
-        auctions() { return '<h2>🚧 Live Auctions (Demnächst)</h2>'; },
-        tracking() { return '<h2>🚧 Tracking (Demnächst)</h2>'; },
-        changelog() { return '<h2>🚧 Changelog</h2>'; }
-      },
-
-      // --- COMPONENTS ---
-      components: {
-        productCard(p) {
-          const price = app.calculateCurrentPrice(p);
-          return `
-            <div class="product-card reveal-card" onclick="app.nav('product', ${p.id})">
-              <div class="badge-live"><i class="fas fa-arrow-down"></i> -€${p.dropRate}/min</div>
-              <div class="img-box"><img src="${p.img}" alt="${p.title}" loading="lazy"></div>
-              <div style="padding:15px; flex:1; display:flex; flex-direction:column;">
-                <div style="font-weight:700; font-size:1.1rem; margin-bottom:5px;">${p.title}</div>
-                <div style="color:#666; font-size:0.9rem; margin-bottom:auto;">${app.state.categories[p.cat]?.name || 'Stuff'}</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
-                  <div class="price-box" data-price-id="${p.id}">€${price.toFixed(2)}</div>
-                  <div style="font-size:0.8rem; color:var(--danger);">Min: €${p.minPrice}</div>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-      },
-
-      // --- ACTIONS ---
-      handleFilePreview(input) {
-        if (input.files && input.files[0]) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            const preview = document.querySelector('#imagePreview img');
-            preview.src = e.target.result;
-            document.getElementById('imagePreview').style.display = 'block';
-            document.getElementById('dropArea').style.display = 'none';
-          }
-          reader.readAsDataURL(input.files[0]);
-        }
-      },
-
-      handleUpload(e) {
-        e.preventDefault();
-        const form = e.target;
-        
-        // Handle File Reading (Asyncish)
-        const fileInput = form.querySelector('input[name="imageFile"]');
-        const reader = new FileReader();
-        
-        reader.onload = (event) => {
-          const newProduct = {
-            id: Date.now(),
-            title: form.title.value,
-            desc: form.desc.value,
-            startPrice: parseFloat(form.startPrice.value),
-            minPrice: parseFloat(form.minPrice.value),
-            dropRate: parseFloat(form.dropRate.value),
-            startTime: Date.now(), // Timer starts NOW
-            cat: form.category.value,
-            img: event.target.result, // Base64 Data URL
-            seller: this.state.user.name
-          };
-          
-          this.state.products.unshift(newProduct);
-          this.closeModals();
-          this.toast('Drop ist online! 🚀', 'success');
-          this.nav('profile'); // Show it in profile
-        };
-
-        if (fileInput.files[0]) {
-          reader.readAsDataURL(fileInput.files[0]);
-        } else {
-          alert("Bild fehlt, Brudi!");
-        }
-      },
-
-      filterCat(cat) {
-        if (cat === 'all') {
-          this.nav('home'); // Reload full list (lazy implementation)
-        } else {
-          // Manually render filtered list into grid
-          const filtered = this.state.products.filter(p => p.cat === cat);
-          document.getElementById('productGrid').innerHTML = filtered.map(p => this.components.productCard(p)).join('');
-        }
-      },
-
-      search(term) {
-        if (this.state.page !== 'home') this.nav('home');
-        const q = term.toLowerCase();
-        const filtered = this.state.products.filter(p => p.title.toLowerCase().includes(q));
-        document.getElementById('productGrid').innerHTML = filtered.map(p => this.components.productCard(p)).join('');
-      },
-
-      // --- UTILS ---
-      toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('active');
-        document.getElementById('sidebarOverlay').classList.toggle('active');
-      },
-      closeSidebar() {
-        document.getElementById('sidebar').classList.remove('active');
-        document.getElementById('sidebarOverlay').classList.remove('active');
-      },
-      openUploadModal() { document.getElementById('uploadModal').classList.add('open'); },
-      closeModals() { document.querySelectorAll('.modal-backdrop').forEach(el => el.classList.remove('open')); },
-      
+      /* --- UI UTILITIES --- */
       toast(msg, type = 'info') {
         const container = document.getElementById('toastContainer');
         const el = document.createElement('div');
-        el.className = 'toast';
-        el.style.borderLeftColor = type === 'success' ? 'var(--success)' : 'var(--main)';
-        el.innerHTML = `<span>${msg}</span> <i class="fas ${type==='success'?'fa-check-circle':'fa-info-circle'}"></i>`;
+        el.className = `toast ${type}`;
+        el.innerHTML = `<span>${msg}</span> <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>`;
         container.appendChild(el);
+        // Clean up after animation
         setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
       },
 
-      setupFluentEffect() {
-        const cards = document.querySelectorAll(".reveal-card");
-        document.body.onmousemove = e => {
-          for(const card of cards) {
-            const rect = card.getBoundingClientRect();
-            card.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
-            card.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
-          }
+      openModal(id) { document.getElementById(id + 'Modal').classList.add('active'); },
+      closeModals() { document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active')); },
+
+      /* --- CORE DROP LOGIC --- */
+      calculate(p) {
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - p.startTime) / 1000);
+        const intervalsPassed = Math.floor(elapsedSeconds / p.dropInterval);
+        
+        let currentPrice = p.startPrice - (intervalsPassed * p.dropAmount);
+        if (currentPrice < p.minPrice) currentPrice = p.minPrice;
+
+        const secondsIntoCurrentInterval = elapsedSeconds % p.dropInterval;
+        const secondsLeft = p.dropInterval - secondsIntoCurrentInterval;
+        const progress = (secondsLeft / p.dropInterval) * 100;
+
+        return { 
+          price: currentPrice.toFixed(2), 
+          timeLeft: secondsLeft, 
+          progress: progress,
+          isMin: currentPrice <= p.minPrice
         };
-      }
+      },
+
+      tick() {
+        this.state.products.forEach(p => {
+          const data = this.calculate(p);
+          const card = document.getElementById(`card-${p.id}`);
+          if(!card) return;
+
+          const priceEl = card.querySelector('.price-value');
+          if(priceEl.innerText !== data.price) {
+             priceEl.innerText = data.price;
+             priceEl.style.color = 'var(--accent)';
+             setTimeout(() => priceEl.style.color = 'var(--text-main)', 300);
+          }
+
+          const circle = card.querySelector('.timer-circle-fg');
+          const text = card.querySelector('.timer-text');
+          
+          if(data.isMin) {
+            text.innerText = "MIN";
+            circle.style.strokeDashoffset = 100;
+            circle.style.stroke = "var(--text-muted)";
+          } else {
+            text.innerText = data.timeLeft;
+            const offset = 100 - data.progress;
+            circle.style.strokeDashoffset = offset;
+          }
+        });
+      },
+
+      /* --- GEMINI API INTEGRATION --- */
+      async callGemini(prompt, useGrounding = false, responseMimeType = "text/plain", responseSchema = null) {
+        let payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            systemInstruction: { parts: [{ text: "Du bist ein erfahrener Marktplatz-Assistent und sprichst nur Deutsch." }] }
+        };
+
+        if (useGrounding) {
+            payload.tools = [{ "google_search": {} }];
+        }
+        
+        if (responseMimeType === "application/json" && responseSchema) {
+            payload.generationConfig = {
+                responseMimeType: "application/json",
+                responseSchema: responseSchema
+            };
+        }
+
+        try {
+          const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          return text;
+        } catch (error) {
+          console.error("Gemini API Error:", error);
+          this.toast("Gemini API Fehler. Bitte versuche es später erneut.", 'error');
+          return null;
+        }
+      },
+
+      // Feature 1: AI Price Consultant (Uses Grounding, Structured JSON)
+      async predictPriceReal() {
+        const title = document.getElementById('inTitle').value;
+        if(!title) { this.toast("Bitte zuerst einen Produktnamen eingeben!", 'info'); return; }
+
+        const btn = document.querySelector('button[onclick="app.predictPriceReal()"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Scanning...';
+
+        const prompt = `
+          Du bist ein Pricing-Experte für einen Streetwear/Tech-Marktplatz und nutzt Google Search für aktuelle Marktpreise.
+          Das Produkt ist: "${title}".
+          Schlage 3 Werte im JSON-Format vor (ohne Markdown, nur der JSON-String):
+          1. "start": realistischer Startpreis in Euro (high estimate).
+          2. "step": Drop-Betrag pro Intervall (z.B. 2-10).
+          3. "interval": Zeitintervall in Sekunden (10, 30 oder 60).
+          Antworte NUR mit dem JSON String.
+        `;
+        
+        const schema = {
+            type: "OBJECT",
+            properties: {
+                "start": { "type": "NUMBER" },
+                "step": { "type": "NUMBER" },
+                "interval": { "type": "INTEGER" }
+            },
+            propertyOrdering: ["start", "step", "interval"]
+        };
+
+        const result = await this.callGemini(prompt, true, "application/json", schema);
+        
+        try {
+          const data = JSON.parse(result);
+          
+          document.getElementById('inStart').value = data.start.toFixed(2);
+          document.getElementById('inStep').value = data.step.toFixed(2);
+          
+          const options = [10, 30, 60];
+          const closest = options.reduce((prev, curr) => Math.abs(curr - data.interval) < Math.abs(prev - data.interval) ? curr : prev);
+          document.getElementById('inInterval').value = closest;
+
+          btn.innerHTML = '<i class="fas fa-check"></i> Applied';
+          this.toast("Pricing erfolgreich von Gemini übernommen!", 'success');
+          setTimeout(() => btn.innerHTML = originalText, 2000);
+        } catch (e) {
+            console.error("Parsing Error", e);
+            btn.innerHTML = 'Error';
+            this.toast("Gemini konnte kein valides Pricing generieren.", 'error');
+            setTimeout(() => btn.innerHTML = originalText, 2000);
+        }
+      },
+
+      // Feature 2: AI Description Generator
+      async generateDescriptionReal() {
+        const title = document.getElementById('inTitle').value;
+        if(!title) { this.toast("Bitte zuerst einen Produktnamen eingeben!", 'info'); return; }
+
+        const btn = document.querySelector('button[onclick="app.generateDescriptionReal()"]');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Writing...';
+
+        const prompt = `
+          Schreibe eine kurze, hypende Verkaufsbeschreibung für "${title}" auf Deutsch.
+          Nutze Jugendsprache / Streetwear-Slang (clean, cop, deadstock, grail).
+          Antworte nur mit dem Text, ohne Markdown-Formatierung. Maximal 2 Sätze.
+        `;
+
+        const text = await this.callGemini(prompt, false);
+        if(text) {
+            document.getElementById('inDesc').value = text.trim().replace(/\*/g, ''); // Fix: Remove asterisks
+            btn.innerHTML = '<i class="fas fa-check"></i> Done';
+            this.toast("Hype-Text generiert!", 'success');
+        } else {
+            btn.innerHTML = 'Error';
+        }
+        setTimeout(() => btn.innerHTML = originalText, 2000);
+      },
+
+      // Feature 3: AI Deal Verdict (Uses Grounding)
+      async showAIReal(title, currentPrice, id) {
+        const modal = document.getElementById('aiModal');
+        const textEl = document.getElementById('aiText');
+        
+        modal.classList.add('active');
+        textEl.innerHTML = '<div style="text-align:center"><i class="fas fa-spinner spinner" style="font-size:2rem; color:var(--accent)"></i><br><br>Gemini analysiert den Markt...</div>';
+
+        const prompt = `
+          Analysiere diesen Deal auf einem Drop-Marktplatz unter Berücksichtigung von aktuellen Marktpreisen, die du recherchieren sollst:
+          Produkt: "${title}"
+          Aktueller Preis: ${currentPrice}€
+          
+          Ist das ein "Good Deal" (unter Marktwert), ein "Mid Deal" (fairer Preis) oder ein "Bad Deal" (über Marktwert)?
+          Erkläre deine Einschätzung kurz (maximal 2 Sätze) auf Deutsch, ohne Markdown-Formatierung. Nenne zuerst deine Einstufung (Good Deal, Mid Deal oder Bad Deal).
+        `;
+
+        const analysis = await this.callGemini(prompt, true); // Use Grounding
+        
+        if (analysis) {
+             // Fix 2: Replace newlines with <br> for better readability and prevent unparsed markdown issues
+            textEl.innerHTML = analysis.trim().replace(/\n/g, '<br>');
+        } else {
+            textEl.innerText = "Konnte keine Verbindung zu Gemini herstellen oder keine Analyse durchführen.";
+        }
+      },
+
+
+      /* --- DETAIL VIEW & PURCHASE FLOW --- */
+      openDetailModal(productId) {
+        const p = this.state.products.find(prod => prod.id === productId);
+        if (!p) return this.toast("Produkt nicht gefunden!", 'error');
+
+        const data = this.calculate(p);
+        document.getElementById('detailTitle').innerText = p.title;
+        const contentEl = document.getElementById('detailContent');
+        
+        const html = `
+            <img src="${p.img}" alt="${p.title}" class="detail-img">
+            <div class="detail-price">€${data.price}</div>
+            
+            <div style="margin-bottom: 25px; line-height: 1.5; color: var(--text-main);">${p.description}</div>
+
+            <div class="detail-info-row">
+                <span>Drop Start</span>
+                <span>€${p.startPrice.toFixed(2)}</span>
+            </div>
+            <div class="detail-info-row">
+                <span>Mindestpreis</span>
+                <span>€${p.minPrice.toFixed(2)}</span>
+            </div>
+            <div class="detail-info-row">
+                <span>Drop Step / Intervall</span>
+                <span>€${p.dropAmount.toFixed(2)} / ${p.dropInterval}s</span>
+            </div>
+            <div class="detail-info-row">
+                <span>Kategorie</span>
+                <span>${p.category}</span>
+            </div>
+            <div class="detail-info-row">
+                <span>Verbleibende Zeit im Intervall</span>
+                <span id="detailTimeLeft">${data.timeLeft}s</span>
+            </div>
+            
+            <div style="margin-top:20px; text-align:center;">
+                <div class="ai-verdict" onclick="app.showAIReal('${p.title}', '${data.price}', ${p.id})" style="width:100%; justify-content:center;">
+                    <div class="status-dot" style="background:var(--accent)"></div> LIVE AI DEAL CHECK
+                </div>
+            </div>
+        `;
+        
+        contentEl.innerHTML = html;
+        document.getElementById('buyButton').onclick = () => this.simulatePurchase(p.id, data.price);
+
+        // Keep detail time updated
+        const updateDetailTime = () => {
+             const newData = this.calculate(p);
+             const timeEl = document.getElementById('detailTimeLeft');
+             const priceEl = document.querySelector('.detail-price');
+             
+             if (timeEl) timeEl.innerText = newData.isMin ? 'MIN' : `${newData.timeLeft}s`;
+             if (priceEl) priceEl.innerText = `€${newData.price}`;
+             
+             // Stop updating if modal is closed
+             if (!document.getElementById('detailModal').classList.contains('active')) {
+                 clearInterval(this.detailUpdateInterval);
+             }
+        };
+        // Clear previous interval if exists
+        if (this.detailUpdateInterval) clearInterval(this.detailUpdateInterval);
+        this.detailUpdateInterval = setInterval(updateDetailTime, 500);
+
+        this.openModal('detail');
+      },
+
+      simulatePurchase(productId, finalPrice) {
+        // --- Simulated Checkout Process ---
+        this.closeModals();
+        this.toast(`Starte Zahlung für ${finalPrice}€...`, 'info');
+
+        // Simulate a delay for payment processing
+        setTimeout(() => {
+          const success = Math.random() > 0.1; // 90% success rate
+
+          if (success) {
+            this.toast(`Kauf erfolgreich! ${finalPrice}€ für das Produkt ${productId} bezahlt.`, 'success');
+            // Remove item from the list
+            this.state.products = this.state.products.filter(p => p.id !== productId);
+            this.renderGrid();
+            this.renderMarquee();
+          } else {
+            this.toast("Zahlung fehlgeschlagen. Versuche es erneut.", 'error');
+          }
+        }, 1500);
+      },
+
+      /* --- RENDERING --- */
+      renderGrid() {
+        const container = document.getElementById('productGrid');
+        container.innerHTML = this.state.products.map(p => this.createCardHTML(p)).join('');
+      },
+
+      createCardHTML(p) {
+        const data = this.calculate(p);
+        
+        // Fix 1: Dot is now just neutral, because the actual AI analysis is triggered on click
+        // The color logic is now complex, let's keep it simple: grey dot until clicked.
+        const dotColor = 'var(--text-muted)'; 
+        
+        return `
+          <div class="card fade-up" id="card-${p.id}" onclick="app.openDetailModal(${p.id})">
+            <div class="card-img-container">
+              <img src="${p.img}" alt="${p.title}" onerror="this.onerror=null; this.src='https://placehold.co/800x800/1a1a1a/e5e5e5?text=${p.title.split(' ')[0].toUpperCase()}'">
+              <div class="card-badges">
+                <div class="badge accent">LIVE</div>
+                <div class="badge">${p.category}</div>
+              </div>
+            </div>
+            
+            <div class="card-info">
+              <div>
+                <div class="card-title">${p.title}</div>
+                <div class="card-sub">
+                  <span>Start: €${p.startPrice.toFixed(2)}</span>
+                  <!-- Trigger AI Verdict, opens the specific AI modal first -->
+                  <div class="ai-verdict" onclick="event.stopPropagation(); app.showAIReal('${p.title}', '${data.price}', ${p.id})">
+                    <div class="status-dot" style="background:${dotColor}"></div> ✨ Gemini Check
+                  </div>
+                </div>
+              </div>
+
+              <div class="price-row">
+                <div>
+                  <div class="price-label">Current Price</div>
+                  <div class="price-main">€ <span class="price-value">${data.price}</span></div>
+                </div>
+                
+                <div class="timer-ring">
+                  <svg class="timer-svg" viewBox="0 0 36 36">
+                    <path class="timer-circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="timer-circle-fg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  </svg>
+                  <div class="timer-text">${data.timeLeft}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      },
+
+      renderMarquee() {
+        const mq = document.getElementById('marquee');
+        const items = this.state.products.map(p => 
+          `<div class="marquee-item"><span>NEW IN</span> ${p.title.toUpperCase()} — €${p.startPrice.toFixed(2)}</div>`
+        ).join('');
+        // Duplicate content for smooth infinite scroll effect
+        mq.innerHTML = items + items + items;
+      },
+
+      createDrop(e) {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const startPrice = parseFloat(fd.get('start'));
+        
+        const newProduct = {
+          id: Date.now(),
+          title: fd.get('title'),
+          img: 'https://placehold.co/800x800/222/FFF?text=DROP',
+          startPrice: startPrice,
+          minPrice: startPrice * 0.5, // Standard 50% minimum
+          dropAmount: parseFloat(fd.get('step')),
+          dropInterval: parseInt(fd.get('interval')),
+          startTime: Date.now(),
+          category: 'Community Drop',
+          description: fd.get('description') || "Keine Beschreibung verfügbar. Vertraue auf den Drop!"
+        };
+
+        this.state.products.unshift(newProduct);
+        this.renderGrid();
+        this.renderMarquee();
+        this.closeModals();
+        this.toast(`Neuer Drop: ${newProduct.title} erfolgreich veröffentlicht!`, 'success');
+      },
     };
 
     document.addEventListener('DOMContentLoaded', () => app.init());
